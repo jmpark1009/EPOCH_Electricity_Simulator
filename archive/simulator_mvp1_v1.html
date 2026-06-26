@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>소상공인 전기요금 AI · A5 통합 시뮬레이터</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --blue:    #185FA5;
+  --blue-lt: #E6F1FB;
+  --blue-dk: #0C447C;
+  --red:     #E24B4A;
+  --red-lt:  #FFF5F5;
+  --green:   #1D9E75;
+  --green-lt:#E1F5EE;
+  --amber:   #BA7517;
+  --amber-lt:#FAEEDA;
+  --gray:    #888780;
+  --gray-lt: #F5F5F3;
+  --border:  #E8E6E0;
+  --text:    #1A1A1A;
+  --text2:   #666;
+}
+
+body {
+  margin: 0;
+  font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', Arial, sans-serif;
+  background: #F0EEE8;
+  color: var(--text);
+  min-height: 100vh;
+  padding: 28px 14px 60px;
+}
+
+.wrap { max-width: 660px; margin: 0 auto; }
+
+/* ── 카드 ── */
+.card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 2px 18px rgba(0,0,0,0.07);
+  padding: 24px;
+  margin-bottom: 14px;
+}
+
+/* ── 헤더 ── */
+.tag {
+  display: inline-block;
+  font-size: 11px; font-weight: 800;
+  color: var(--blue); background: var(--blue-lt);
+  padding: 5px 11px; border-radius: 999px;
+  margin-bottom: 10px;
+}
+h1 { font-size: 22px; margin: 0 0 5px; letter-spacing: -.04em; }
+.desc { font-size: 13px; line-height: 1.65; color: var(--text2); margin: 0; }
+
+/* ── 섹션 제목 ── */
+.sec { font-size: 12px; font-weight: 900; color: var(--gray); margin: 20px 0 8px; letter-spacing: .03em; text-transform: uppercase; }
+
+/* ── 그리드 ── */
+.grid2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+
+/* ── 필드 ── */
+.field { margin-bottom: 10px; }
+label { display: block; font-size: 12px; font-weight: 800; color: var(--text2); margin-bottom: 5px; }
+input, select {
+  width: 100%; padding: 11px 13px;
+  border-radius: 12px; border: 1.5px solid var(--border);
+  background: #fff; font-family: inherit;
+  font-size: 14px; color: var(--text); font-weight: 700;
+  -webkit-text-fill-color: var(--text); opacity: 1;
+}
+input:focus, select:focus { outline: none; border-color: var(--blue); }
+
+/* ── 선택 버튼 ── */
+.opt-btn {
+  padding: 11px 10px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: #fff;
+  font-size: 13px; font-family: inherit; cursor: pointer; text-align: left;
+  transition: border-color .15s, background .15s;
+}
+.opt-btn.sel { border: 2px solid var(--blue); background: var(--blue-lt); color: var(--blue); font-weight: 900; }
+
+/* ── 주 버튼 ── */
+.btn-primary {
+  width: 100%; margin-top: 14px; padding: 15px;
+  border: 0; border-radius: 14px;
+  background: var(--blue); color: #fff;
+  font-weight: 900; font-size: 15px;
+  cursor: pointer; font-family: inherit;
+  transition: background .15s;
+}
+.btn-primary:hover { background: var(--blue-dk); }
+.btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+
+/* ── 트랙 라벨 ── */
+.track-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 900; padding: 4px 12px;
+  border-radius: 999px; margin-bottom: 6px;
+}
+.track-label.A { background: var(--blue-lt); color: var(--blue); }
+.track-label.B { background: var(--red-lt); color: var(--red); border: 1.5px solid #FFCACA; }
+
+/* ── KPI 그리드 ── */
+.kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 14px 0; }
+.kpi { background: var(--gray-lt); border-radius: 14px; padding: 13px 14px; }
+.kpi-name { font-size: 11px; font-weight: 700; color: var(--gray); margin-bottom: 4px; }
+.kpi-value { font-size: 20px; font-weight: 900; letter-spacing: -.03em; }
+.kpi-sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+/* ── 충격 박스 ── */
+.shock-box {
+  border-radius: 16px; padding: 18px 20px; margin: 12px 0;
+}
+.shock-box.positive { background: #FFF5F5; border: 2px solid #FFCACA; }
+.shock-box.zero     { background: var(--green-lt); border: 2px solid #9FE1CB; }
+.shock-label { font-size: 12px; font-weight: 800; color: var(--gray); }
+.shock-val   { font-size: 28px; font-weight: 900; letter-spacing: -.04em; margin: 4px 0; }
+.shock-val.up   { color: var(--red); }
+.shock-val.zero { color: var(--green); }
+.shock-desc  { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+/* ── 시뮬 테이블 ── */
+.sim-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+.sim-table th { font-size: 11px; font-weight: 800; color: var(--gray); text-align: left; padding: 6px 0; border-bottom: 1.5px solid var(--border); }
+.sim-table td { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.sim-table td:last-child { text-align: right; font-weight: 700; }
+.sim-table .accent { color: var(--green); font-weight: 900; }
+.sim-table .bad    { color: var(--red); }
+
+/* ── C1 처방 카드 ── */
+.presc-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.presc-item {
+  border: 1.5px solid var(--border); border-radius: 14px;
+  padding: 14px 16px; position: relative;
+}
+.presc-rank {
+  position: absolute; top: 12px; right: 14px;
+  font-size: 11px; font-weight: 900; color: var(--gray);
+}
+.presc-name { font-size: 14px; font-weight: 900; margin-bottom: 4px; }
+.presc-action { font-size: 12px; color: var(--text2); margin-bottom: 10px; }
+.presc-kpi { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; }
+.presc-kpi-item { background: var(--gray-lt); border-radius: 10px; padding: 9px 11px; }
+.presc-kpi-name { font-size: 10px; font-weight: 700; color: var(--gray); }
+.presc-kpi-val  { font-size: 15px; font-weight: 900; margin-top: 2px; }
+.presc-tag { display: inline-block; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; margin-top: 8px; }
+.presc-tag.subsidy { background: var(--green-lt); color: var(--green); }
+.presc-tag.peak    { background: var(--amber-lt); color: var(--amber); }
+.presc-note { font-size: 11px; color: var(--gray); margin-top: 6px; line-height: 1.5; }
+
+/* ── 부하 이동 슬라이더 ── */
+.slider-wrap { margin: 12px 0; }
+.slider-wrap input[type=range] { padding: 0; border: none; background: transparent; accent-color: var(--blue); }
+.slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+/* ── 부하 바 차트 ── */
+.bar-chart { display: flex; align-items: flex-end; gap: 2px; height: 60px; margin: 12px 0; }
+.bar-col   { flex: 1; border-radius: 3px 3px 0 0; min-height: 3px; transition: height .3s, background .3s; }
+.bar-col.peak-h { background: var(--red); }
+.bar-col.mid-h  { background: var(--amber); }
+.bar-col.off-h  { background: var(--blue); }
+.bar-col.shift  { background: var(--green); }
+.bar-labels { display: flex; gap: 2px; }
+.bar-lbl    { flex: 1; text-align: center; font-size: 9px; color: var(--gray); }
+
+/* ── 정보 행 ── */
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.info-row:last-child { border: none; }
+.info-row span:last-child { font-weight: 700; }
+
+/* ── 알림 ── */
+.notice { background: #FAFAF8; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 12px; color: var(--text2); line-height: 1.6; margin-top: 12px; }
+
+/* ── 뱃지 ── */
+.badge { display: inline-block; font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+.badge.A { background: var(--blue-lt); color: var(--blue); }
+.badge.B { background: var(--red-lt); color: var(--red); }
+
+/* ── 탭 ── */
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.tab  { flex: 1; padding: 10px; border-radius: 10px; border: 1.5px solid var(--border); background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; text-align: center; }
+.tab.active { border-color: var(--blue); background: var(--blue-lt); color: var(--blue); }
+
+/* ── Track A 전용 ── */
+.track-a-only { display: none; }
+.track-b-only { display: none; }
+
+/* ── 푸터 ── */
+.footer { text-align: center; font-size: 11px; color: var(--gray); margin-top: 28px; }
+
+/* ── 스피너 ── */
+.spinner { text-align: center; padding: 28px; font-size: 13px; color: var(--gray); }
+
+/* ── 범례 ── */
+.legend { display: flex; gap: 12px; font-size: 11px; margin-bottom: 4px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 헤더 -->
+<div class="card">
+  <div class="tag">A5 · 신규 시간대 요금제 절감 시뮬레이터</div>
+  <h1>6월 요금 충격 얼마나 될까요?</h1>
+  <p class="desc">
+    2026년 6월 1일부터 일반용(갑)Ⅱ·일반용(을) 고객에게 시간대별 요금제가 신규 적용됩니다.<br>
+    A1 업종별 표준 부하곡선 + A2 역산 kWh + C1 효율가전 ROI를 통합해 정량적으로 진단합니다.
+  </p>
+</div>
+
+<!-- 입력 카드 -->
+<div class="card" id="inputCard">
+  <div class="sec">매장 기본 정보</div>
+  <div class="field">
+    <label>업종</label>
+    <div class="grid3" id="industryGrid">
+      <button class="opt-btn sel" data-v="restaurant">🍽 음식점</button>
+      <button class="opt-btn"     data-v="pub">🍺 주점</button>
+      <button class="opt-btn"     data-v="cafe">☕ 카페</button>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="field">
+      <label>영업 월</label>
+      <select id="monthSel">
+        <option value="6" selected>6월 (여름)</option>
+        <option value="7">7월 (여름)</option>
+        <option value="8">8월 (여름)</option>
+        <option value="3">3월 (봄·가을)</option>
+        <option value="9">9월 (봄·가을)</option>
+        <option value="12">12월 (겨울)</option>
+        <option value="1">1월 (겨울)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>영업 시작 시간</label>
+      <select id="openSel">
+        <option value="8">08시</option>
+        <option value="9">09시</option>
+        <option value="10">10시</option>
+        <option value="11" selected>11시</option>
+        <option value="12">12시</option>
+        <option value="13">13시</option>
+        <option value="17">17시</option>
+        <option value="18">18시</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>영업 종료 시간</label>
+      <select id="closeSel">
+        <option value="20">20시</option>
+        <option value="21">21시</option>
+        <option value="22" selected>22시</option>
+        <option value="23">23시</option>
+        <option value="24">24시 (자정)</option>
+        <option value="25">01시 (익일)</option>
+        <option value="26">02시 (익일)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>계약전력 (kW)</label>
+      <input type="number" id="powerInput" value="5" min="1" max="300">
+    </div>
+  </div>
+
+  <div class="sec">전기 요금 정보</div>
+  <div class="grid2">
+    <div class="field">
+      <label>전월 청구금액 (원)</label>
+      <input type="number" id="billInput" value="380000" min="0" step="1000">
+    </div>
+    <div class="field">
+      <label>또는 사용량 직접입력 (kWh)</label>
+      <input type="number" id="kwhInput" value="" min="0" placeholder="비워두면 청구액 역산">
+    </div>
+    <div class="field">
+      <label>계약종별</label>
+      <select id="contractSel">
+        <option value="auto">모름 / 자동추정</option>
+        <option value="갑Ⅰ">일반용(갑)Ⅰ</option>
+        <option value="갑Ⅱ" selected>일반용(갑)Ⅱ</option>
+        <option value="을">일반용(을)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>전압</label>
+      <select id="voltageSel">
+        <option value="저압">저압</option>
+        <option value="고압A" selected>고압A</option>
+        <option value="고압B">고압B</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="runA5()">🔍 시뮬레이션 시작</button>
+</div>
+
+<!-- 결과 영역 -->
+<div id="resultArea"></div>
+
+<div class="footer">공공데이터 기반 MVP 추정 · 2026년 4월 16일 시행 요금표 적용 · 실제 청구액과 차이가 있을 수 있음</div>
+</div>
+
+<script>
+// ============================================================
+// ① 임베디드 데이터 (A2 demo에서 추출한 요금표 + A1 부하곡선)
+// ============================================================
+
+// A1 표준 부하곡선 (업종별, 시간대 0~23 인덱스, 월 6월 기준)
+// 출처: 2022~2024 산업별 시간대 전력소비 상대계수 평균
+const A1_LOAD_CURVE = {
+  restaurant: [
+    0.022, 0.019, 0.017, 0.016, 0.016, 0.018,
+    0.026, 0.038, 0.055, 0.065, 0.070, 0.072,
+    0.075, 0.065, 0.052, 0.048, 0.051, 0.060,
+    0.065, 0.058, 0.048, 0.038, 0.030, 0.024
+  ],
+  pub: [
+    0.019, 0.016, 0.014, 0.013, 0.013, 0.015,
+    0.017, 0.020, 0.025, 0.028, 0.030, 0.032,
+    0.035, 0.032, 0.035, 0.042, 0.055, 0.075,
+    0.082, 0.080, 0.072, 0.060, 0.045, 0.030
+  ],
+  cafe: [
+    0.018, 0.015, 0.014, 0.013, 0.013, 0.015,
+    0.020, 0.032, 0.055, 0.070, 0.075, 0.072,
+    0.068, 0.062, 0.058, 0.055, 0.058, 0.062,
+    0.060, 0.048, 0.035, 0.025, 0.020, 0.018
+  ]
+};
+
+// 갑Ⅰ 단일단가 (저압, 2026-04-16 시행 기준)
+const GAB1_RATES = {
+  summer:     { all_time: 132.4, base_fee: 6160 },
+  spring_fall:{ all_time:  91.9, base_fee: 6160 },
+  winter:     { all_time: 119.0, base_fee: 6160 }
+};
+
+// 갑Ⅱ 시간대별 단가 (고압A 선택Ⅱ 기준 — 소상공인 가장 일반적)
+const GAB2_RATES = {
+  summer: {
+    off_peak:  89.4,
+    mid_peak: 140.6,
+    peak:     163.1,
+    base_fee: 7170
+  },
+  spring_fall: {
+    off_peak:  84.1,
+    mid_peak:  91.5,
+    peak:     108.1,
+    base_fee: 7170
+  },
+  winter: {
+    off_peak:  92.8,
+    mid_peak: 123.2,
+    peak:     143.3,
+    base_fee: 7170
+  }
+};
+
+// 시간대 분류 (0~23 인덱스, 2026-06-01 개편 기준)
+// peak: 15~21시 (index 15,16,17,18,19,20)
+// off_peak: 22~08시 (index 22,23,0,1,2,3,4,5,6,7,8)
+// mid_peak: 나머지 (9~14, 21)
+const TIME_BAND = Array.from({length:24}, (_,h) => {
+  if ([15,16,17,18,19,20].includes(h)) return 'peak';
+  if ([22,23,0,1,2,3,4,5,6,7,8].includes(h)) return 'off_peak';
+  return 'mid_peak';
+});
+
+// 부가세·기금 승수
+const BILL_MULT     = 1.127;
+const CLIMATE_FEE   = 9.0;
+const FUEL_FEE      = 5.0;
+const SURCHARGE     = CLIMATE_FEE + FUEL_FEE;
+
+// C1 효율가전 절감 데이터 (한국에너지공단 DB 기반 룰)
+const C1_APPLIANCES = {
+  restaurant: [
+    { name:'상업용 냉장고 (3등급→1등급)', annual_diff_kwh: 224, is24h: true, list_price: 2500000, refund_rate: 0.40 },
+    { name:'전기냉방기 (3등급→1등급)',    annual_diff_kwh: 180, is24h: false, list_price: 1500000, refund_rate: 0.40 },
+    { name:'형광등 12개 → LED 교체',      annual_diff_kwh: 512, is24h: false, list_price: 420000,  refund_rate: 0 },
+  ],
+  pub: [
+    { name:'상업용 냉장고 (4등급→1등급)', annual_diff_kwh: 500, is24h: true, list_price: 2200000, refund_rate: 0.40 },
+    { name:'전기냉방기 (3등급→1등급)',    annual_diff_kwh: 180, is24h: false, list_price: 1500000, refund_rate: 0.40 },
+    { name:'형광등 10개 → LED 교체',      annual_diff_kwh: 427, is24h: false, list_price: 350000,  refund_rate: 0 },
+  ],
+  cafe: [
+    { name:'상업용 냉장고 (3등급→1등급)', annual_diff_kwh: 224, is24h: true, list_price: 2800000, refund_rate: 0.40 },
+    { name:'전기냉방기 (3등급→1등급)',    annual_diff_kwh: 180, is24h: false, list_price: 1500000, refund_rate: 0.40 },
+    { name:'형광등 24개 → LED 교체',      annual_diff_kwh: 1024,is24h: false, list_price: 840000,  refund_rate: 0 },
+  ]
+};
+
+// 부하이동 가능 액션 (A5 시뮬레이션용)
+const SHIFT_ACTIONS = {
+  restaurant: [
+    { name:'식기세척기 운전 이동 (15~21시 → 22시 이후)', peak_kwh_per_day: 1.2 },
+    { name:'쌀 불리기·냉동식재료 해동 이동 (오전으로)',  peak_kwh_per_day: 0.8 },
+    { name:'에어컨 예냉 설정 (14시까지 사전 가동)',       peak_kwh_per_day: 0.6 },
+  ],
+  pub: [
+    { name:'맥주냉장고 추가 냉각 이동 (18시 이전 완료)', peak_kwh_per_day: 1.5 },
+    { name:'청소·정리 작업 이동 (익일 오전으로)',         peak_kwh_per_day: 0.5 },
+    { name:'에어컨 예냉 설정 (17시까지 사전 가동)',       peak_kwh_per_day: 0.8 },
+  ],
+  cafe: [
+    { name:'원두 로스팅 이동 (14시 이전 완료)',            peak_kwh_per_day: 0.9 },
+    { name:'에어컨 예냉 설정 (14시까지 사전 가동)',        peak_kwh_per_day: 0.7 },
+    { name:'냉장 재료 준비 이동 (오전으로)',               peak_kwh_per_day: 0.5 },
+  ]
+};
+
+// ============================================================
+// ② 상태 변수
+// ============================================================
+let selectedIndustry = 'restaurant';
+let shiftPct = 20; // 부하이동 비율 (%)
+
+// 업종 버튼
+document.querySelectorAll('#industryGrid .opt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#industryGrid .opt-btn').forEach(x => x.classList.remove('sel'));
+    btn.classList.add('sel');
+    selectedIndustry = btn.dataset.v;
+  });
+});
+
+// ============================================================
+// ③ 유틸 함수
+// ============================================================
+function getSeasonCode(month) {
+  if ([6,7,8].includes(+month)) return 'summer';
+  if ([11,12,1,2].includes(+month)) return 'winter';
+  return 'spring_fall';
+}
+
+function fmt(n, unit='원') {
+  return Math.round(n).toLocaleString() + unit;
+}
+
+function normalizeShare(arr) {
+  const total = arr.reduce((a,b) => a+b, 0);
+  return arr.map(v => v/total);
+}
+
+// A1 부하곡선 → 영업시간 마스크 적용 후 24시간 kWh 배열 생성
+function buildHourlyKwh(monthlyKwh, industry, openH, closeH) {
+  const raw = A1_LOAD_CURVE[industry];
+  // 영업시간 마스크: 해당 시간대만 70% 가중, 나머지 30%
+  const mask = raw.map((v, h) => {
+    let inBiz;
+    if (closeH <= 24) {
+      inBiz = h >= openH && h < closeH;
+    } else {
+      // 자정 넘는 경우 (예: 17~26시 = 17~24 + 0~2시)
+      inBiz = h >= openH || h < (closeH - 24);
+    }
+    return inBiz ? v * 1.4 : v * 0.6;
+  });
+  const shares = normalizeShare(mask);
+  return shares.map(s => s * monthlyKwh);
+}
+
+// ============================================================
+// ④ A2 로직: kWh 역산
+// ============================================================
+function a2EstimateKwh(bill, contractPower, contractType, voltage, seasonCode) {
+  let energyRate;
+  if (contractType === '갑Ⅰ') {
+    energyRate = GAB1_RATES[seasonCode].all_time;
+  } else {
+    // 갑Ⅱ 가중평균 (업종별 기본 가중치 사용)
+    const r = GAB2_RATES[seasonCode];
+    const w = { off_peak: 0.30, mid_peak: 0.40, peak: 0.30 };
+    energyRate = r.off_peak*w.off_peak + r.mid_peak*w.mid_peak + r.peak*w.peak;
+  }
+  const baseFee = (contractType === '갑Ⅰ' ? GAB1_RATES[seasonCode].base_fee : GAB2_RATES[seasonCode].base_fee) * contractPower;
+  const variableRate = energyRate + SURCHARGE;
+  const beforeTax = bill / BILL_MULT;
+  const estimated = Math.max(1, (beforeTax - baseFee) / variableRate);
+  return { estimated, energyRate, baseFee, variableRate };
+}
+
+// ============================================================
+// ⑤ A5 핵심: 갑Ⅱ 개편 충격 계산
+// ============================================================
+function calcShock(hourlyKwh, seasonCode, contractPower) {
+  const r2 = GAB2_RATES[seasonCode];
+  // 갑Ⅱ 시간대별 월 요금
+  let gab2Energy = 0;
+  hourlyKwh.forEach((kwh, h) => {
+    const band = TIME_BAND[h];
+    gab2Energy += kwh * r2[band];
+  });
+  const monthlyKwh = hourlyKwh.reduce((a,b)=>a+b,0);
+  const gab2Bill = (gab2Energy + monthlyKwh * SURCHARGE + r2.base_fee * contractPower) * BILL_MULT;
+
+  // 갑Ⅰ 단일단가 기준 환산 요금 (개편 전 비교값)
+  const r1 = GAB1_RATES[seasonCode];
+  const gab1Bill = ((monthlyKwh * (r1.all_time + SURCHARGE)) + r1.base_fee * contractPower) * BILL_MULT;
+
+  // 시간대별 kWh 합산
+  let peakKwh=0, midKwh=0, offKwh=0;
+  hourlyKwh.forEach((kwh,h) => {
+    const b = TIME_BAND[h];
+    if (b==='peak') peakKwh+=kwh;
+    else if (b==='mid_peak') midKwh+=kwh;
+    else offKwh+=kwh;
+  });
+
+  return {
+    gab1Bill, gab2Bill,
+    shock: gab2Bill - gab1Bill,
+    shockPct: (gab2Bill - gab1Bill) / gab1Bill * 100,
+    monthlyKwh, peakKwh, midKwh, offKwh,
+    peakShare: peakKwh / monthlyKwh,
+  };
+}
+
+// ============================================================
+// ⑥ 부하이동 절감 계산
+// ============================================================
+function calcShiftSavings(shock, shiftPctVal, hourlyKwh, seasonCode) {
+  const r2 = GAB2_RATES[seasonCode];
+  // 이동 가능 kWh (peak → off_peak)
+  const shiftableKwh = shock.peakKwh * (shiftPctVal / 100);
+  const rateDiff = r2.peak - r2.off_peak;
+  const monthSaving = shiftableKwh * rateDiff * BILL_MULT;
+  return { shiftableKwh, rateDiff, monthSaving, annualSaving: monthSaving * 12 };
+}
+
+// ============================================================
+// ⑦ C1 처방 계산
+// ============================================================
+function calcC1Prescriptions(hourlyKwh, seasonCode, industry, isTrackB) {
+  const r2 = GAB2_RATES[seasonCode];
+  const r1 = GAB1_RATES[seasonCode];
+
+  // 가중평균 단가 (Track B)
+  const monthlyKwh = hourlyKwh.reduce((a,b)=>a+b,0);
+  let peakKwh=0, midKwh=0, offKwh=0;
+  hourlyKwh.forEach((kwh,h)=>{
+    const b=TIME_BAND[h];
+    if(b==='peak') peakKwh+=kwh;
+    else if(b==='mid_peak') midKwh+=kwh;
+    else offKwh+=kwh;
+  });
+
+  const weightedRate = isTrackB
+    ? (peakKwh*r2.peak + midKwh*r2.mid_peak + offKwh*r2.off_peak) / monthlyKwh
+    : (r1.all_time);
+
+  return C1_APPLIANCES[industry].map((ap, i) => {
+    // 연간 절감액 계산
+    let rate = weightedRate;
+    if (isTrackB && ap.is24h) rate = weightedRate; // 24h 가전은 전체 가중단가
+    if (isTrackB && !ap.is24h) rate = r2.mid_peak; // 영업시간 가전은 중간부하 단가
+
+    const annualSavingKrw = Math.round(ap.annual_diff_kwh * rate);
+    const co2Kg = Math.round(ap.annual_diff_kwh * 0.4747);
+    const subsidy = Math.round(ap.list_price * ap.refund_rate);
+    const netInvest = ap.list_price - subsidy;
+    const paybackM = (netInvest / Math.max(annualSavingKrw,1)) * 12;
+
+    // Track B에서 peak 시간대 절감 분리 (24h 가전)
+    let peakSaving = 0;
+    if (isTrackB && ap.is24h) {
+      peakSaving = Math.round(ap.annual_diff_kwh * (peakKwh/monthlyKwh) * r2.peak);
+    }
+
+    return {
+      rank: i+1,
+      name: ap.name,
+      annualSavingKrw, co2Kg, peakSaving,
+      listPrice: ap.list_price,
+      subsidy, netInvest,
+      paybackM: Math.round(paybackM*10)/10,
+      refundRate: ap.refund_rate
+    };
+  }).sort((a,b) => a.paybackM - b.paybackM);
+}
+
+// ============================================================
+// ⑧ 바 차트 렌더
+// ============================================================
+function renderBarChart(hourlyKwh, shiftPctVal) {
+  const max = Math.max(...hourlyKwh);
+  const bars = hourlyKwh.map((kwh, h) => {
+    const band = TIME_BAND[h];
+    const isPeak = band === 'peak';
+    const shiftedKwh = isPeak ? kwh * (1 - shiftPctVal/100) : kwh;
+    const shiftKwh   = isPeak ? kwh * (shiftPctVal/100) : 0;
+    const pctH = (shiftedKwh / max * 56).toFixed(1);
+    const pctS = (shiftKwh   / max * 56).toFixed(1);
+    const cls  = band==='peak'?'peak-h':band==='mid_peak'?'mid-h':'off-h';
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:stretch;gap:1px">
+      ${shiftKwh>0 ? `<div class="bar-col shift" style="height:${pctS}px"></div>` : ''}
+      <div class="bar-col ${cls}" style="height:${pctH}px"></div>
+    </div>`;
+  }).join('');
+
+  const lbls = Array.from({length:24},(_,h)=>
+    h%6===0?`<div style="flex:1;text-align:center;font-size:9px;color:var(--gray)">${h}시</div>`
+           :`<div style="flex:1"></div>`
+  ).join('');
+
+  return `
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot" style="background:var(--red)"></span>최대부하(15~21시)</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span>중간부하</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>경부하</span>
+      <span class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>이동 절감</span>
+    </div>
+    <div class="bar-chart">${bars}</div>
+    <div class="bar-labels">${lbls}</div>
+  `;
+}
+
+// ============================================================
+// ⑨ 메인 분석 함수
+// ============================================================
+function runA5() {
+  const month        = +document.getElementById('monthSel').value;
+  const openH        = +document.getElementById('openSel').value;
+  const closeH       = +document.getElementById('closeSel').value;
+  const bill         = +document.getElementById('billInput').value;
+  const kwhRaw       = +document.getElementById('kwhInput').value;
+  const contractPower= +document.getElementById('powerInput').value;
+  const contractSel  = document.getElementById('contractSel').value;
+  const voltage      = document.getElementById('voltageSel').value;
+  const industry     = selectedIndustry;
+  const seasonCode   = getSeasonCode(month);
+
+  // Track 판별
+  let contractType = contractSel === 'auto' ? '갑Ⅱ' : contractSel;
+  const isTrackB = (contractType === '갑Ⅱ' || contractType === '을');
+
+  // kWh 결정 (직접 or 역산)
+  let monthlyKwh, inputMode, uncertaintyPct;
+  if (kwhRaw > 0) {
+    monthlyKwh     = kwhRaw;
+    inputMode      = 'kWh 직접입력';
+    uncertaintyPct = 5;
+  } else {
+    const a2 = a2EstimateKwh(bill, contractPower, contractType, voltage, seasonCode);
+    monthlyKwh     = a2.estimated;
+    inputMode      = '청구금액 역산';
+    uncertaintyPct = 15;
+  }
+
+  // A1 + A2 결합: 24시간 kWh 배열
+  const hourlyKwh = buildHourlyKwh(monthlyKwh, industry, openH, closeH);
+
+  // A5 핵심 계산
+  const shock = calcShock(hourlyKwh, seasonCode, contractPower);
+  const shift  = calcShiftSavings(shock, shiftPct, hourlyKwh, seasonCode);
+  const c1List = calcC1Prescriptions(hourlyKwh, seasonCode, industry, isTrackB);
+
+  const industryName = {restaurant:'음식점', pub:'주점', cafe:'카페'}[industry];
+  const seasonName   = seasonCode==='summer'?'여름철':seasonCode==='winter'?'겨울철':'봄·가을철';
+
+  // ── 결과 렌더링 ──
+  const trackClass = isTrackB ? 'B' : 'A';
+
+  // Track A: 기준 진단만
+  const trackAHtml = !isTrackB ? `
+    <div class="card">
+      <div class="track-label A">Track A · 갑Ⅰ 단일요금</div>
+      <p style="font-size:14px;margin:10px 0 6px;font-weight:700">이 매장은 6월 시간대 요금제 변경 대상이 아닙니다.</p>
+      <p style="font-size:13px;color:var(--text2);margin:0">갑Ⅰ 계약은 기존과 동일한 단일 단가가 유지됩니다.<br>아래 <b>C1 효율가전 교체 처방</b>으로 지금 당장 절감하세요.</p>
+      <div class="kpi-row" style="margin-top:14px">
+        <div class="kpi">
+          <div class="kpi-name">월 추정 사용량</div>
+          <div class="kpi-value">${fmt(monthlyKwh,'kWh')}</div>
+          <div class="kpi-sub">(±${uncertaintyPct}% · ${inputMode})</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-name">일 평균</div>
+          <div class="kpi-value">${(monthlyKwh/30).toFixed(1)}kWh</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-name">최대부하 비중</div>
+          <div class="kpi-value">${(shock.peakShare*100).toFixed(1)}%</div>
+          <div class="kpi-sub">15~21시</div>
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  // Track B: 충격 예측
+  const shockPositive = shock.shock > 0;
+  const trackBHtml = isTrackB ? `
+    <div class="card">
+      <div class="track-label B">Track B · 갑Ⅱ/을 — 6월 요금제 신규 적용</div>
+      <p style="font-size:13px;color:var(--text2);margin:6px 0 14px">
+        2026년 6월 1일부터 시간대별 단가가 적용됩니다. ${seasonName} 15~21시가 최대부하(가장 비쌈)입니다.
+      </p>
+
+      <!-- 충격 박스 -->
+      <div class="shock-box ${shockPositive?'positive':'zero'}">
+        <div class="shock-label">6월 예상 요금 변동 (갑Ⅰ 기준 대비)</div>
+        <div class="shock-val ${shockPositive?'up':'zero'}">
+          ${shockPositive?'+':''}${fmt(shock.shock)} / 월
+        </div>
+        <div class="shock-desc">
+          갑Ⅰ 기준: ${fmt(shock.gab1Bill)} → 갑Ⅱ 적용: ${fmt(shock.gab2Bill)}<br>
+          월 사용량 ${fmt(shock.monthlyKwh,'kWh')} 중 최대부하 ${fmt(shock.peakKwh,'kWh')} (${(shock.peakShare*100).toFixed(1)}%)
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-name">월 추정 사용량</div>
+          <div class="kpi-value">${fmt(shock.monthlyKwh,'kWh')}</div>
+          <div class="kpi-sub">±${uncertaintyPct}% · ${inputMode}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-name">최대부하(15~21시)</div>
+          <div class="kpi-value" style="color:var(--red)">${fmt(shock.peakKwh,'kWh')}</div>
+          <div class="kpi-sub">${(shock.peakShare*100).toFixed(1)}% 비중</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-name">연간 예상 추가비용</div>
+          <div class="kpi-value" style="color:var(--red)">${fmt(shock.shock*12)}</div>
+        </div>
+      </div>
+
+      <!-- 시간대별 부하 차트 -->
+      <div class="sec">시간대별 전력 부하 (A1 업종 표준곡선 기반)</div>
+      <div id="barChartArea">${renderBarChart(hourlyKwh, 0)}</div>
+
+      <!-- 부하이동 시뮬레이션 -->
+      <div class="sec" style="margin-top:20px">부하이동 시뮬레이션 — 최대부하 이동 비율</div>
+      <div class="slider-wrap">
+        <input type="range" id="shiftSlider" min="0" max="50" step="5" value="${shiftPct}"
+               style="width:100%" oninput="onShiftChange(this.value)">
+        <div class="slider-labels"><span>0%</span><span>10%</span><span>20%</span><span>30%</span><span>40%</span><span>50%</span></div>
+      </div>
+      <div id="shiftResult"></div>
+
+      <!-- 부하이동 액션 -->
+      <div class="sec">이동 가능한 부하 Top 3</div>
+      <table class="sim-table">
+        <thead><tr><th>액션</th><th>일 절감 kWh</th></tr></thead>
+        <tbody>
+          ${SHIFT_ACTIONS[industry].map(a => `
+            <tr>
+              <td>${a.name}</td>
+              <td class="accent">${a.peak_kwh_per_day.toFixed(1)} kWh</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <!-- 시간대별 단가 요약 -->
+      <div class="sec" style="margin-top:20px">적용 단가 (갑Ⅱ ${seasonName})</div>
+      <table class="sim-table">
+        <thead><tr><th>시간대</th><th>시간</th><th>단가</th><th>비중</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>🔴 최대부하</td>
+            <td>15~21시</td>
+            <td class="bad">${GAB2_RATES[seasonCode].peak}원/kWh</td>
+            <td>${(shock.peakShare*100).toFixed(1)}%</td>
+          </tr>
+          <tr>
+            <td>🟡 중간부하</td>
+            <td>09~15, 21~22시</td>
+            <td style="color:var(--amber)">${GAB2_RATES[seasonCode].mid_peak}원/kWh</td>
+            <td>${((shock.midKwh/shock.monthlyKwh)*100).toFixed(1)}%</td>
+          </tr>
+          <tr>
+            <td>🔵 경부하</td>
+            <td>22~09시</td>
+            <td style="color:var(--blue)">${GAB2_RATES[seasonCode].off_peak}원/kWh</td>
+            <td>${((shock.offKwh/shock.monthlyKwh)*100).toFixed(1)}%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  ` : '';
+
+  // C1 처방 카드
+  const c1Html = `
+    <div class="card">
+      <div class="sec" style="margin-top:0">C1 · 절감 처방 Top 3</div>
+      <p style="font-size:13px;color:var(--text2);margin:0 0 12px">
+        ${isTrackB
+          ? `갑Ⅱ 시간대 가중단가 기준 ROI 계산 · 최대부하 절감분 별도 표시`
+          : `갑Ⅰ 단일단가 기준 ROI 계산 · 한전 소상공인 지원금 자동 반영`}
+      </p>
+      <div class="presc-list">
+        ${c1List.map(p => `
+          <div class="presc-item">
+            <div class="presc-rank">${p.rank}순위</div>
+            <div class="presc-name">${p.name}</div>
+            <div class="presc-action">연 절감: ${fmt(p.annualSavingKrw)} / ${p.co2Kg.toLocaleString()}kg CO₂ 감축</div>
+            <div class="presc-kpi">
+              <div class="presc-kpi-item">
+                <div class="presc-kpi-name">실투자비</div>
+                <div class="presc-kpi-val">${fmt(p.netInvest)}</div>
+              </div>
+              <div class="presc-kpi-item">
+                <div class="presc-kpi-name">투자회수기간</div>
+                <div class="presc-kpi-val">${p.paybackM}개월</div>
+              </div>
+            </div>
+            ${p.refundRate > 0 ? `<span class="presc-tag subsidy">한전 소상공인 ${(p.refundRate*100).toFixed(0)}% 환급 · ${fmt(p.subsidy)}</span>` : ''}
+            ${p.peakSaving > 0 ? `<span class="presc-tag peak">최대부하 절감분 ${fmt(p.peakSaving)}/년</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      ${isTrackB && shock.shock > 0 ? `
+        <div class="notice" style="margin-top:14px">
+          💡 <b>통합 절감 시나리오</b>: 부하이동 ${shiftPct}% + C1 처방 1순위 실행 시<br>
+          예상 월 절감 = <b>${fmt(shift.monthSaving + c1List[0].annualSavingKrw/12)}</b>
+          (6월 충격 ${fmt(shock.shock)}의 ${Math.min(100,Math.round((shift.monthSaving+c1List[0].annualSavingKrw/12)/shock.shock*100))}% 상쇄)
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  // 기본 정보 패널
+  const infoHtml = `
+    <div class="card">
+      <div class="sec" style="margin-top:0">분석 기준 정보</div>
+      <div class="info-row"><span>업종</span><span>${industryName}</span></div>
+      <div class="info-row"><span>계절</span><span>${seasonName} (${month}월)</span></div>
+      <div class="info-row"><span>영업시간</span><span>${openH}시 ~ ${closeH>24?closeH-24+'시(익일)':closeH+'시'}</span></div>
+      <div class="info-row"><span>계약종별</span><span>${contractType} <span class="badge ${trackClass}">Track ${trackClass}</span></span></div>
+      <div class="info-row"><span>전압</span><span>${voltage}</span></div>
+      <div class="info-row"><span>계약전력</span><span>${contractPower}kW</span></div>
+      <div class="info-row"><span>월 사용량 (추정)</span><span>${fmt(monthlyKwh,'kWh')} (${inputMode})</span></div>
+      <div class="notice">
+        본 결과는 A1 업종별 표준 부하곡선(2022~2024 평균) + A2 kWh 역산 + C1 효율등급 DB 기반 추정값입니다.
+        실제 청구서와 계약 조건을 반드시 확인하세요.
+      </div>
+    </div>
+  `;
+
+  document.getElementById('resultArea').innerHTML = trackAHtml + trackBHtml + c1Html + infoHtml;
+
+  // 슬라이더 초기화 (Track B만)
+  if (isTrackB) {
+    updateShiftResult(shiftPct, shift, shock, seasonCode);
+  }
+
+  // 스크롤
+  document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============================================================
+// ⑩ 부하이동 슬라이더 업데이트
+// ============================================================
+function onShiftChange(val) {
+  shiftPct = +val;
+  const month      = +document.getElementById('monthSel').value;
+  const openH      = +document.getElementById('openSel').value;
+  const closeH     = +document.getElementById('closeSel').value;
+  const bill       = +document.getElementById('billInput').value;
+  const kwhRaw     = +document.getElementById('kwhInput').value;
+  const contractP  = +document.getElementById('powerInput').value;
+  const contractT  = document.getElementById('contractSel').value === 'auto' ? '갑Ⅱ' : document.getElementById('contractSel').value;
+  const seasonCode = getSeasonCode(month);
+
+  let monthlyKwh;
+  if (kwhRaw > 0) monthlyKwh = kwhRaw;
+  else { const a2 = a2EstimateKwh(bill, contractP, contractT, document.getElementById('voltageSel').value, seasonCode); monthlyKwh = a2.estimated; }
+
+  const hourlyKwh = buildHourlyKwh(monthlyKwh, selectedIndustry, openH, closeH);
+  const shock     = calcShock(hourlyKwh, seasonCode, contractP);
+  const shift     = calcShiftSavings(shock, shiftPct, hourlyKwh, seasonCode);
+
+  // 차트 업데이트
+  const barEl = document.getElementById('barChartArea');
+  if (barEl) barEl.innerHTML = renderBarChart(hourlyKwh, shiftPct);
+
+  updateShiftResult(shiftPct, shift, shock, seasonCode);
+}
+
+function updateShiftResult(pct, shift, shock, seasonCode) {
+  const el = document.getElementById('shiftResult');
+  if (!el) return;
+  const r2 = GAB2_RATES[seasonCode];
+  el.innerHTML = `
+    <div class="shock-box ${shift.monthSaving>0?'positive':'zero'}" style="background:var(--green-lt);border-color:#9FE1CB">
+      <div class="shock-label">최대부하 ${pct}% 이동 시 예상 절감</div>
+      <div class="shock-val zero" style="font-size:24px">월 ${fmt(shift.monthSaving)} 절감</div>
+      <div class="shock-desc">
+        이동 kWh: ${shift.shiftableKwh.toFixed(1)}kWh/월
+        (최대부하 ${fmt(r2.peak,'원')} → 경부하 ${fmt(r2.off_peak,'원')}, 차이 ${fmt(shift.rateDiff,'원/kWh')})<br>
+        연간 절감: <b>${fmt(shift.annualSaving)}</b>
+        ${shock.shock > 0 ? `· 6월 충격 ${fmt(shock.shock)}의 ${Math.min(100,Math.round(shift.monthSaving/shock.shock*100))}% 상쇄` : ''}
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
