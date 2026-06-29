@@ -1754,5 +1754,245 @@ syncFlowVersion();
 showStep(1);
 
 </script>
+
+<!-- ====================================================== -->
+<!-- 용어 도우미 (하단 플로팅 버튼 → 버튼형 용어 패널)        -->
+<!-- LLM 미사용 · 한전 요금표/공고문 기반 검수 콘텐츠         -->
+<!-- 기존 로직과 독립. 이 블록만 제거하면 원복됨.            -->
+<!-- ====================================================== -->
+<style>
+  .gloss-fab{position:fixed;right:18px;bottom:96px;z-index:60;
+    display:flex;align-items:center;gap:8px;
+    background:var(--club-deep);color:#fff;border:none;cursor:pointer;
+    padding:13px 18px 13px 15px;border-radius:99px;
+    font-family:inherit;font-size:14.5px;font-weight:800;letter-spacing:-.01em;
+    box-shadow:0 8px 24px rgba(10,47,28,.28);
+    transition:transform .18s var(--ease),box-shadow .18s var(--ease);}
+  .gloss-fab:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(10,47,28,.34);}
+  .gloss-fab .fab-ic{font-size:18px;line-height:1;}
+  @media(min-width:520px){.gloss-fab{right:calc(50% - 240px + 18px);}}
+
+  .gloss-ov{position:fixed;inset:0;z-index:70;background:rgba(10,47,28,.42);
+    opacity:0;pointer-events:none;transition:opacity .22s var(--ease);
+    display:flex;justify-content:center;align-items:flex-end;}
+  .gloss-ov.on{opacity:1;pointer-events:auto;}
+  @media(min-width:520px){.gloss-ov{align-items:center;}}
+
+  .gloss-sheet{width:100%;max-width:480px;max-height:82vh;overflow-y:auto;
+    background:#fff;border-radius:22px 22px 0 0;
+    transform:translateY(28px);transition:transform .26s var(--ease);
+    padding:0 0 22px;-webkit-overflow-scrolling:touch;}
+  .gloss-ov.on .gloss-sheet{transform:translateY(0);}
+  @media(min-width:520px){.gloss-sheet{border-radius:22px;}}
+
+  .gloss-head{position:sticky;top:0;background:#fff;z-index:2;
+    padding:20px 22px 10px;border-bottom:1px solid var(--border);}
+  .gloss-bot{display:flex;align-items:flex-start;gap:11px;margin-bottom:4px;}
+  .gloss-av{flex-shrink:0;width:38px;height:38px;border-radius:50%;
+    background:var(--club-soft);display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .gloss-bub{background:var(--blue-lt);border-radius:4px 16px 16px 16px;
+    padding:11px 14px;font-size:14px;font-weight:600;line-height:1.55;color:var(--text);}
+  .gloss-bub b{color:var(--club-deep);font-weight:800;}
+  .gloss-x{position:absolute;top:16px;right:16px;width:30px;height:30px;border:none;
+    background:var(--gray-lt);border-radius:50%;font-size:16px;color:var(--text2);
+    cursor:pointer;line-height:1;}
+
+  .gloss-chips{display:flex;flex-wrap:wrap;gap:8px;padding:14px 22px 4px;}
+  .gloss-chip{border:1.5px solid var(--border);background:#fff;color:var(--text);
+    border-radius:99px;padding:9px 15px;font-family:inherit;font-size:13.5px;font-weight:800;
+    cursor:pointer;letter-spacing:-.01em;transition:all .15s var(--ease);}
+  .gloss-chip:hover{border-color:var(--club-mid);background:var(--blue-lt);}
+  .gloss-chip.on{background:var(--club-deep);color:#fff;border-color:var(--club-deep);}
+
+  .gloss-body{padding:6px 22px 0;}
+  .gloss-ans{display:none;animation:glossIn .26s var(--ease);}
+  .gloss-ans.on{display:block;}
+  @keyframes glossIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .gloss-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;
+    padding:16px 17px;margin-top:12px;}
+  .gloss-term{font-size:17px;font-weight:900;color:var(--club-deep);margin:0 0 3px;letter-spacing:-.02em;}
+  .gloss-one{font-size:13px;font-weight:700;color:var(--club-mid);margin:0 0 11px;}
+  .gloss-desc{font-size:14px;font-weight:600;line-height:1.62;color:var(--text);margin:0;}
+  .gloss-desc .hl{color:var(--red);font-weight:800;}
+  .gloss-desc b{color:var(--club-deep);font-weight:800;}
+
+  .gloss-find{margin-top:13px;padding:11px 13px;background:var(--blue-lt);
+    border-radius:11px;font-size:12.5px;font-weight:700;line-height:1.55;color:var(--blue-dk);}
+  .gloss-find .ft{font-weight:900;color:var(--club-deep);}
+
+  .gloss-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;}
+  .gloss-tag{font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:99px;}
+  .gloss-tag.red{background:var(--red-lt);color:var(--red);}
+  .gloss-tag.green{background:var(--green-lt);color:var(--green);}
+  .gloss-tag.amber{background:var(--amber-lt);color:#9A6B12;}
+
+  .gloss-src{padding:14px 22px 0;}
+  .gloss-src small{font-size:11px;font-weight:700;color:var(--gray);line-height:1.5;}
+</style>
+
+<button class="gloss-fab" id="glossFab" aria-label="용어 도우미 열기">
+  <span class="fab-ic">💬</span><span>용어가 어려우세요?</span>
+</button>
+
+<div class="gloss-ov" id="glossOv">
+  <div class="gloss-sheet" role="dialog" aria-label="전기요금 용어 도우미">
+    <div class="gloss-head">
+      <button class="gloss-x" id="glossX" aria-label="닫기">✕</button>
+      <div class="gloss-bot">
+        <div class="gloss-av">💬</div>
+        <div class="gloss-bub">
+          안녕하세요, 사장님! 청구서에 나오는 <b>전기요금 용어</b>가 헷갈리실 수 있어요.<br>
+          궁금한 용어를 눌러보세요. 무엇이 궁금하세요?
+        </div>
+      </div>
+    </div>
+
+    <div class="gloss-chips" id="glossChips">
+      <button class="gloss-chip" data-g="band">⏰ 최대부하</button>
+      <button class="gloss-chip" data-g="type">📄 계약 종별</button>
+      <button class="gloss-chip" data-g="power">⚡ 계약전력</button>
+      <button class="gloss-chip" data-g="volt">🔌 전압</button>
+      <button class="gloss-chip" data-g="midoff">🟡🔵 중간·경부하</button>
+    </div>
+
+    <div class="gloss-body" id="glossBody">
+      <!-- 최대부하 -->
+      <div class="gloss-ans" data-a="band">
+        <div class="gloss-card">
+          <p class="gloss-term">최대부하 (피크)</p>
+          <p class="gloss-one">하루 중 전기요금이 가장 비싼 시간대</p>
+          <p class="gloss-desc">
+            전기를 쓰는 사람이 가장 몰리는 시간대예요. 2026년 6월 개편으로
+            <span class="hl">오후 3시~9시(15~21시)</span>가 새로 '최대부하'로 지정됐어요.
+            저녁 장사가 많은 <b>음식점·카페·편의점</b>은 이 시간대 단가가 올라
+            6월부터 요금 충격이 커질 수 있어요.
+          </p>
+          <div class="gloss-tags">
+            <span class="gloss-tag red">15~21시 = 가장 비쌈</span>
+            <span class="gloss-tag green">이 시간 사용을 줄이면 절감</span>
+          </div>
+          <div class="gloss-find">
+            <span class="ft">왜 중요?</span> 우리 시뮬레이터는 이 시간대 영업 여부로
+            6월 요금 변화를 계산해요. 부하를 이 시간 밖으로 옮기면 절감액이 나옵니다.
+          </div>
+        </div>
+      </div>
+
+      <!-- 계약 종별 -->
+      <div class="gloss-ans" data-a="type">
+        <div class="gloss-card">
+          <p class="gloss-term">계약 종별</p>
+          <p class="gloss-one">우리 매장이 어떤 요금제로 계약했는지</p>
+          <p class="gloss-desc">
+            매장 규모·용도에 따라 한전과 맺는 요금 계약의 종류예요.
+            소상공인은 보통 <b>일반용</b>이고, 크게 셋으로 나뉘어요.<br><br>
+            · <b>갑Ⅰ</b> : 작은 매장. 시간대 구분 없이 <b>단일 요금</b> (계량기 단순)<br>
+            · <b>갑Ⅱ</b> : 중형 매장. <span class="hl">시간대별 요금 적용</span> (6월 개편 대상)<br>
+            · <b>을</b> : 더 큰 매장. <span class="hl">시간대별 요금 적용</span>
+          </p>
+          <div class="gloss-tags">
+            <span class="gloss-tag green">갑Ⅰ = 기존 단일요금</span>
+            <span class="gloss-tag red">갑Ⅱ·을 = 6월 시간대 요금 신규</span>
+          </div>
+          <div class="gloss-find">
+            <span class="ft">청구서에서 찾기</span> "계약종별" 항목에
+            '일반용(갑)Ⅰ'처럼 적혀 있어요. <b>모르시면 '잘 모르겠어요'</b>를
+            고르시면 가장 일반적인 기준으로 계산해 드려요.
+          </div>
+        </div>
+      </div>
+
+      <!-- 계약전력 -->
+      <div class="gloss-ans" data-a="power">
+        <div class="gloss-card">
+          <p class="gloss-term">계약전력 (kW)</p>
+          <p class="gloss-one">우리 매장이 쓸 수 있는 전기 용량</p>
+          <p class="gloss-desc">
+            한전과 약속한 <b>전기 사용 용량</b>이에요. 이 값에 따라 매달
+            <b>기본요금</b>이 정해져요. 보통 작은 카페·음식점은 <b>5kW 안팎</b>이에요.
+          </p>
+          <div class="gloss-tags">
+            <span class="gloss-tag amber">기본요금을 결정</span>
+          </div>
+          <div class="gloss-find">
+            <span class="ft">몰라도 괜찮아요</span> 청구서 "계약전력" 항목에 'OkW'로
+            적혀 있지만, 모르셔도 <b>업종 평균값으로 자동 계산</b>해 드려요.
+          </div>
+        </div>
+      </div>
+
+      <!-- 전압 -->
+      <div class="gloss-ans" data-a="volt">
+        <div class="gloss-card">
+          <p class="gloss-term">전압 (저압 / 고압)</p>
+          <p class="gloss-one">매장에 전기가 들어오는 방식</p>
+          <p class="gloss-desc">
+            전기를 어떤 세기로 공급받는지에 따라 단가가 조금 달라져요.<br><br>
+            · <b>저압</b> : 일반 <b>카페·음식점</b> 등 대부분의 작은 매장<br>
+            · <b>고압A</b> : <b>학원·마트·중대형 매장</b><br>
+            · <b>고압B</b> : 대형 건물·대형 시설
+          </p>
+          <div class="gloss-tags">
+            <span class="gloss-tag green">작은 매장 대부분 = 저압</span>
+          </div>
+          <div class="gloss-find">
+            <span class="ft">잘 안 보여요</span> 청구서에 또렷이 안 적힌 경우가 많아요.
+            <b>모르시면 '모름(저압으로 계산)'</b>을 고르시면 가장 흔한 기준으로
+            안전하게 계산해 드려요.
+          </div>
+        </div>
+      </div>
+
+      <!-- 중간·경부하 -->
+      <div class="gloss-ans" data-a="midoff">
+        <div class="gloss-card">
+          <p class="gloss-term">중간부하 · 경부하</p>
+          <p class="gloss-one">최대부하가 아닌 나머지 시간대</p>
+          <p class="gloss-desc">
+            하루 24시간은 요금에 따라 셋으로 나뉘어요.<br><br>
+            · <span class="hl">최대부하</span> : 15~21시 (가장 비쌈)<br>
+            · <b>중간부하</b> : 09~14시·22시 (중간 단가)<br>
+            · <b>경부하</b> : 23시~다음날 08시 (가장 쌈)<br><br>
+            결과 그래프의 <b>빨강·노랑·파랑</b>이 각각 이 세 시간대예요.
+            장사 시간을 비싼 시간 밖으로 옮길수록 요금이 줄어듭니다.
+          </p>
+          <div class="gloss-tags">
+            <span class="gloss-tag red">빨강 = 최대부하</span>
+            <span class="gloss-tag amber">노랑 = 중간부하</span>
+            <span class="gloss-tag green">파랑 = 경부하(가장 쌈)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gloss-src">
+      <small>※ 한국전력공사 전기요금표·소상공인 지원 공고문 기준으로 작성된 설명입니다. (2026.06 개편 반영)</small>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var fab  = document.getElementById('glossFab');
+  var ov   = document.getElementById('glossOv');
+  var xbtn = document.getElementById('glossX');
+  var chips= document.querySelectorAll('#glossChips .gloss-chip');
+  var ans  = document.querySelectorAll('#glossBody .gloss-ans');
+
+  function open(){ ov.classList.add('on'); document.body.style.overflow='hidden'; }
+  function close(){ ov.classList.remove('on'); document.body.style.overflow=''; }
+  function pick(key){
+    chips.forEach(function(c){ c.classList.toggle('on', c.dataset.g===key); });
+    ans.forEach(function(a){ a.classList.toggle('on', a.dataset.a===key); });
+  }
+
+  fab.addEventListener('click', function(){ open(); pick('band'); });
+  xbtn.addEventListener('click', close);
+  ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+  chips.forEach(function(c){ c.addEventListener('click', function(){ pick(c.dataset.g); }); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && ov.classList.contains('on')) close(); });
+})();
+</script>
 </body>
 </html>
